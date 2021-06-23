@@ -1,1 +1,3 @@
 builds
+languages/*.po~
+languages/*.po.bak
