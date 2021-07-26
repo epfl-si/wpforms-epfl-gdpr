@@ -1,16 +1,28 @@
 SHELL := /bin/bash
 
 # Define some useful variables
-# wpforms-epfl-gdpr
 PROJECT_NAME := $(shell basename $(CURDIR))
-# 0.0.4
 VERSION := $(shell cat wpforms-epfl-gdpr.php | grep '* Version:' | awk '{print $$3}')
-# Nicolas Borboën
 REPO_OWNER_NAME := $(shell git config --get user.name)
-# ponsfrilus@gmail.com
 REPO_OWNER_EMAIL := $(shell git config --get user.email)
 
+
+.PHONY: help
+## Print this help (see <https://gist.github.com/klmr/575726c7e05d8780505a> for explanation).
+help:
+	@echo "$$(tput bold)Available rules (alphabetical order):$$(tput sgr0)";sed -ne"/^## /{h;s/.*//;:d" -e"H;n;s/^## //;td" -e"s/:.*//;G;s/\\n## /---/;s/\\n/ /g;p;}" ${MAKEFILE_LIST}|LC_ALL='C' sort -f |awk -F --- -v n=$$(tput cols) -v i=20 -v a="$$(tput setaf 6)" -v z="$$(tput sgr0)" '{printf"%s%*s%s ",a,-i,$$1,z;m=split($$2,w," ");l=n-i;for(j=1;j<=m;j++){l-=length(w[j])+1;if(l<= 0){l=n-i-length(w[j])-1;printf"\n%*s ",-i," ";}printf"%s ",w[j];}printf"\n";}'
+
+# This create the whole jam for publishing a new release on github, including 
+# a new version number, updated translation, a "Bounce version commit", a new
+# tag and a new release including the wpforms-epfl-gdpr.zip as asset.
+.PHONY: release
+## Run all the target needed to publishing a new release.
+release: check
+	$(MAKE) version
+	$(MAKE) pot zip commit tag gh-release
+
 .PHONY: check
+## Run mandatory software checks (jq, wp, zip, curl, git, gettext).
 check: check-wp check-zip check-git check-jq check-curl
 
 check-jq:
@@ -39,8 +51,25 @@ define JSON_HEADERS
 "X-Domain": "$(PROJECT_NAME)"}
 endef
 
+# By default, bounce patch version
+# .PHONY: version
+# version: bump-version.sh
+# 	$(MAKE) version-patch
+# 
+# .PHONY: version-patch
+# version-patch: bump-version.sh
+# 	./bump-version.sh -p
+# 
+# .PHONY: version-minor
+# version-minor: bump-version.sh
+# 	./bump-version.sh -m
+# 
+# .PHONY: version-major
+# version-major: bump-version.sh
+# 	./bump-version.sh -M
 
 .PHONY: pot
+## Generate the translations files.
 pot: check-wp check-gettext languages/$(PROJECT_NAME).pot
 	@wp i18n make-pot . languages/$(PROJECT_NAME).pot --headers='$(JSON_HEADERS)'
 	if [ -f languages/$(PROJECT_NAME)-fr_FR.po ] ; then \
@@ -52,6 +81,7 @@ pot: check-wp check-gettext languages/$(PROJECT_NAME).pot
 	msgfmt --output-file=languages/$(PROJECT_NAME)-fr_FR.mo languages/$(PROJECT_NAME)-fr_FR.po
 
 .PHONY: zip
+## Build the zip to be released.
 zip: check-zip
 	@mkdir builds || true
 	cd ..; zip -r -FS $(PROJECT_NAME)/builds/$(PROJECT_NAME)-$(VERSION).zip $(PROJECT_NAME) \
@@ -76,3 +106,65 @@ zip: check-zip
 	fi
 	@echo "Zip for version $(VERSION) is now available in ./builds/$(PROJECT_NAME).zip"
 
+.PHONY: commit
+## Automated commit. 
+commit:
+	@if [[ -z $$(git commit --dry-run --short | grep CHANGELOG.md) ]]; then \
+		read -p "Did you forget to modify the CHANGELOG? Want to abort? [Yy]: " -n 1 -r; \
+		if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+			echo -e "\nAborting....\n"; \
+			exit 1; \
+		else \
+			echo -e "\nContinuing....\n"; \
+		fi \
+	fi
+	@-git add languages/*
+	@-git commit -o languages -m "[T9N] Translations updated"
+	@-git add wpforms-epfl-gdpr.php
+	@-git commit -o wpforms-epfl-gdpr.php -m "[VER] Bump to v$(VERSION)"
+	read -p "Would you like to git add and commit all? [Yy]: " -n 1 -r; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		git commit -am "[ARE] Automated releasing change" ; \
+	fi
+	@-git push
+	@-git status
+
+.PHONY: tag
+## Create a Git tag with latest version.
+tag:
+	@-git tag -a v$(VERSION) -m "Version $(VERSION)"
+	@-git push origin --tags
+
+# .PHONY: gh-release
+# ## Create a GitHub release
+# gh-release: create-gh-release.sh
+# 	./create-gh-release.sh
+
+
+#
+# Please follow the WordPress Coding Standards
+#   (https://github.com/WordPress/WordPress-Coding-Standards)
+# Check `make lint-install` to install PHP_CodeSniffer and WPCS
+#
+.PHONY: lint
+lint: lint-check lint-fix
+
+.PHONY: lint-install
+lint-install:
+	composer global require "squizlabs/php_codesniffer=*"
+	composer require dealerdirect/phpcodesniffer-composer-installer --update-no-dev
+	composer require wp-coding-standards/wpcs --update-no-dev
+
+.PHONY: lint-check
+lint-check:
+	vendor/bin/phpcs --ignore='wpcs,vendor' --standard=WordPress -p .
+
+.PHONY: lint-check-error
+lint-check-error:
+	vendor/bin/phpcs -n --ignore='wpcs,vendor' --standard=WordPress -p .
+#	vendor/bin/phpcs -n --ignore='wpcs,vendor' -p class-wpforms-epfl-gdpr.php --standard=WordPress
+
+.PHONY: lint-fix
+lint-fix:
+	vendor/bin/phpcbf --standard=WordPress class-epfl-gdpr.php --suffix=.fixed
+	vendor/bin/phpcbf --standard=WordPress class-wpforms-epfl-gdpr.php --suffix=.fixed

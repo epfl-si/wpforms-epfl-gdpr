@@ -11,7 +11,7 @@
  * License:     GPL-2.0+
  * License URI: http://www.gnu.org/licenses/gpl-2.0.txt
  *
- * WPForms EPFL GDPR is free software: you can redistribute it and/or 
+ * WPForms EPFL GDPR is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 2 of the License, or
  * any later version.
@@ -39,9 +39,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 define( 'WPFORMS_EPFL_GDPR_VERSION', '1.0.0' );
 // Plugin name.
 define( 'WPFORMS_EPFL_GDPR_NAME', 'WPForms EPFL GDPR' );
-// Latest WP version tested with this plugin
+// Latest WP version tested with this plugin.
 define( 'WP_LATEST_VERSION_WPFORMS_EPFL_GDPR', '5.4' );
-// Minimal WP version required for this plugin
+// Minimal WP version required for this plugin.
 define( 'WP_MIN_VERSION_WPFORMS_EPFL_GDPR', '5.0' );
 
 // Plugin Folder Path.
@@ -56,7 +56,6 @@ if ( ! defined( 'WPFORMS_EPFL_GDPR_PLUGIN_URL' ) ) {
 
 /**
  * Load the payment class.
- *
  */
 function wpforms_epfl_gdpr() {
 
@@ -67,7 +66,7 @@ function wpforms_epfl_gdpr() {
 
 	load_plugin_textdomain( 'wpforms-epfl-gdpr', false, dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
 
-	require_once plugin_dir_path( __FILE__ ) . 'class-epfl-gdpr.php';
+	require_once plugin_dir_path( __FILE__ ) . 'class-wpforms-epfl-gdpr.php';
 
 }
 
