@@ -27,7 +27,7 @@
  *
  * @package    WPFormsEPFLGDPR
  * @license    GPL-2.0+
- * @copyright  Copyright (c) 2019, EPFL
+ * @copyright  Copyright (c) 2021, EPFL
  */
 
 // Exit if accessed directly.
@@ -55,7 +55,7 @@ if ( ! defined( 'WPFORMS_EPFL_GDPR_PLUGIN_URL' ) ) {
 }
 
 /**
- * Load the payment class.
+ * Load the WPForms_EPFL_GDPR class.
  */
 function wpforms_epfl_gdpr() {
 
@@ -67,7 +67,8 @@ function wpforms_epfl_gdpr() {
 	load_plugin_textdomain( 'wpforms-epfl-gdpr', false, dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
 
 	require_once plugin_dir_path( __FILE__ ) . 'class-wpforms-epfl-gdpr.php';
-
+	$wpforms_epfl_gdpr = new WPForms_EPFL_GDPR();
+	$wpforms_epfl_gdpr->init();
 }
 
 add_action( 'wpforms_loaded', 'wpforms_epfl_gdpr' );

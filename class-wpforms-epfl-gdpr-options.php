@@ -1,6 +1,6 @@
 <?php
 /**
- * Summary (no period for file headers)
+ * This class handle WPForms EPFL GDPR Options / Settings
  *
  * Description. (use period)
  *

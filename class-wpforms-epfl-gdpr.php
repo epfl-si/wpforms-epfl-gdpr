@@ -1,6 +1,6 @@
 <?php
 /**
- * Summary (no period for file headers)
+ * Main class of WPFormsEPFLGDPR
  *
  * Description. (use period)
  *
@@ -22,7 +22,7 @@ require_once 'class-wpforms-epfl-gdpr-options.php';
  *
  * @package WPFormsEPFLGDPR
  */
-class WPForms_EPFL_GDPR extends WPForms_Payment {
+class WPForms_EPFL_GDPR {
 
 	/**
 	 * Initialize
@@ -32,45 +32,43 @@ class WPForms_EPFL_GDPR extends WPForms_Payment {
 		$this->wp_min_version    = WP_MIN_VERSION_WPFORMS_EPFL_GDPR;
 		$this->version           = WPFORMS_EPFL_GDPR_VERSION;
 		$this->plugin_name       = WPFORMS_EPFL_GDPR_NAME;
-		$this->name              = 'EPFL GDPR';
+		$this->name              = 'EPFL GDPRxx';
 		$this->slug              = 'wpforms-epfl-gdpr';
 		$this->priority          = 10;
 		$this->cache_seconds     = 3600;
 		// $this->icon              = plugins_url( 'assets/images/EPFL-GDPR-trans.png', __FILE__ );
 
 		// Add additional link to the plugin row
-		// add_filter( 'plugin_row_meta', array( $this, 'add_links_to_plugin_row'), 10, 4 );
 		add_action( 'admin_menu', array( $this, 'wpforms_epfl_gdpr_admin_menu' ) );
-		// add_filter( 'submenu_file', array( $this, 'so3902760_wp_admin_submenu_filter') );
-
-		// add_filters( 'wpforms_overview_table_column_value', $value, $form, $column_name );
 
 		add_action( 'admin_post_save_epfl_gdpr_options', array( $this, 'save_epfl_gdpr_options' ) );
 
-		// add_action( 'wpforms_builder_save_form', array( $this, 'add_date_fields_on_save' ), 10, 2 );
 		// Change the admin list of forms.
-		add_filter( 'wpforms_overview_table_columns', array( $this, 'change_colums' ), 10, 1 );
-		add_filter( 'wpforms_overview_table_column_value', array( $this, 'change_colums_values' ), 10, 3 );
+		add_filter( 'wpforms_overview_table_columns', array( $this, 'alter_wpforms_overview_table_columns' ), 10, 1 );
+		add_filter( 'wpforms_overview_table_column_value', array( $this, 'alter_wpforms_overview_table_columns_values' ), 10, 3 );
+
+		// Remove the menu entry (/wp-admin/admin.php?page=epfl-gdpr-options).
+		add_action( 'admin_init', array( $this, 'remove_epfl_gdpr_menu_entry' ), 999 );
 	}
 
 	/**
-	 * Function: add_date_fields_on_save
+	 * Function: debug
 	 *
-	 * @param int   $form_id The form ID.
-	 * @param array $data The form data.
+	 * @param array $data The data to debug.
 	 */
-	public function add_date_fields_on_save( ?int $form_id, $data ) {
+	public function debug( ?array $data ) {
 		error_log( '--------------------------------' );
-		error_log( var_export( $form_id, true ) );
 		error_log( var_export( $data, true ) );
 	}
 
 	/**
-	 * Function: change_colums
+	 * Function: alter_wpforms_overview_table_columns
+	 *
+	 * Add "ours" columns to /wp-admin/admin.php?page=wpforms-overview
 	 *
 	 * @param array $columns The columns data.
 	 */
-	public function change_colums( $columns ) {
+	public function alter_wpforms_overview_table_columns( $columns ) {
 		$offset = 2;
 		return array_slice( $columns, 0, $offset, true ) +
 			array(
@@ -82,13 +80,13 @@ class WPForms_EPFL_GDPR extends WPForms_Payment {
 	}
 
 	/**
-	 * Function: change_colums_values
+	 * Function: alter_wpforms_overview_table_columns_values
 	 *
 	 * @param array  $value The columns data.
-	 * @param int    $form The form ID.
+	 * @param object $form The form.
 	 * @param string $column_name The columns name.
 	 */
-	public function change_colums_values( $value, $form, $column_name ) {
+	public function alter_wpforms_overview_table_columns_values( $value, $form, $column_name ) {
 
 		if ( 'gdpr' === $column_name || 'start_dt' === $column_name || 'end_dt' === $column_name ) {
 			$form_gdpr_options = new WPForms_EPFL_GDPR_Options( $form->ID );
@@ -133,20 +131,6 @@ class WPForms_EPFL_GDPR extends WPForms_Payment {
 			'epfl-gdpr-options',
 			__CLASS__ . '::epfl_gdpr_manage_page'
 		);
-
-		// Register the hidden submenu.
-		add_submenu_page(
-			'epfl-gdpr-options', // Use the parent slug as usual.
-			__( 'Page title', 'textdomain' ),
-			'',
-			'manage_options',
-			'my_hidden_submenu',
-			__CLASS__ . '::display_my_submenu'
-		);
-
-			// remove_menu_page('admin.php?page=epfl-gdpr-options');
-			// remove_menu_page('admin.php','epfl-gdpr-options');
-			// remove_submenu_page( 'admin.php', 'epfl-gdpr-options');
 	}
 
 	/**
@@ -274,257 +258,23 @@ html.wp-toolbar {
 
 	/**
 	 * Function: display_epfl_gdpr_info
+	 *
+	 * This generate the content of the /wp-admin/admin.php?page=epfl-gdpr-options
+	 * page which is hidden in the menu by the function
+	 * "remove_epfl_gdpr_menu_entry" in this file.
+	 *
+	 * @TODO: add some explaination here.
 	 */
 	public function display_epfl_gdpr_info() {
 		echo '<h1>EPFL GDPR</h1>';
+		echo '<div class="update-nag notice notice-info">While your are not suppose to access this page directly, here is some information: @TODO</div>';
+		die();
 	}
 
 	/**
-	 * Function: display_my_submenu
+	 * Function: remove admin menu entry
 	 */
-	public static function display_my_submenu() {
-		echo 'toot';
+	public function remove_epfl_gdpr_menu_entry() {
+		remove_menu_page( 'epfl-gdpr-options' );
 	}
-
-	/**
-	 * Function: xxx
-	 */
-	public function so3902760_wp_admin_submenu_filter( $submenu_file ) {
-
-		global $plugin_page;
-
-		$hidden_submenus = array(
-			'my_hidden_submenu' => true,
-		);
-
-		// Select another submenu item to highlight (optional).
-		if ( $plugin_page && isset( $hidden_submenus[ $plugin_page ] ) ) {
-			$submenu_file = 'submenu_to_highlight';
-		}
-
-		// Hide the submenu.
-		foreach ( $hidden_submenus as $submenu => $unused ) {
-			remove_submenu_page( 'epfl-gdpr-options', $submenu );
-		}
-
-		return $submenu_file;
-	}
-
-
-	/**
-	 * Temporary function to test actions and filters.
-	 */
-	function test( $entry, $form ) {
-		error_log( '--------------------------------------------' );
-		error_log( var_export( $entry->meta, true ) );
-		error_log( '--------------------------------------------' );
-		error_log( var_export( json_decode( $entry->meta ), true ) );
-		error_log( '--------------------------------------------' );
-		// error_log("--------------------------------------------");
-		// error_log(var_export( $form, true ) );
-		// error_log("--------------------------------------------");
-		// error_log(var_export( $th, true ) );
-	}
-
-	/**
-	 * Add additional links for WPForms EPFL GDPR in the plugins list.
-	 */
-	function add_links_to_plugin_row( $plugin_meta, $plugin_file, $plugin_data, $status ) {
-		if ( $this->plugin_name == $plugin_data['Name'] ) {
-			// if (substr_compare( $plugin_meta[2], '<a href="' . $plugin_data['PluginURI'] .'">', 0, 66) == 0) {
-			// Kick the "Visit plugin site" link and add the "View details" wich is normally reserved for WP hosted plugin
-			// $plugin_meta[2] = sprintf( '<a href="%s" class="thickbox" aria-label="%s" data-title="%s">%s</a>',
-			// esc_url( network_admin_url( 'plugin-install.php?tab=plugin-information&plugin=' . $this->slug . '&TB_iframe=true&width=600&height=550' ) ),
-			// esc_attr( sprintf( __( 'More information about %s' ), $this->name ) ),
-			// esc_attr( $this->name ),
-			// __( 'View details' )
-			// );
-			// }
-			// $row_meta = array(
-			// 'privacy-policy'      => '<a href="' . esc_url( 'https://www.epfl.ch/about/presidency/presidents-team/legal-affairs/epfl-privacy-policy/' ) . '" target="_blank" aria-label="' . esc_attr__( 'Plugin Additional Links', 'wpforms-epfl-gdpr' ) . '">' . esc_html__( 'privacy-policy', 'wpforms-epfl-gdpr' ) . '</a>',
-			// 'help' => '<a href="' . esc_url( 'https://github.com/epfl-si/wpforms-epfl-gdpr' ) . '" target="_blank" aria-label="' . esc_attr__( 'Plugin Additional Links', 'wpforms-epfl-gdpr' ) . '">' . esc_html__( 'Help', 'wpforms-epfl-gdpr' ) . '</a>'
-			// );
-
-			// return array_merge( $plugin_meta, $row_meta );
-		}
-		return (array) $plugin_meta;
-	}
-
-
-
-	/**
-	 * Display content inside the panel content area.
-	 *
-	 * @TODO: find a way to have a new menu entry "EPFL GDPR"
-	 */
-	public function builder_content() {
-
-		echo '<p class="lead">' .
-			sprintf(
-				wp_kses(
-					/* translators: %s - Addons page URL in admin area. */
-					__( 'This addon allows to use <a href="%1$s">EPFL PayonlineXXXX</a> with the <a href="%2$s">WPForms plugin</a>. Please read <a href="%3$s">PayonlineXXXX Help</a> in order to create a payment instance.', 'wpforms-epfl-gdpr' ),
-					array(
-						'a' => array(
-							'href' => array(),
-						),
-					)
-				),
-				esc_url( __( 'https://payonline.epfl.ch?lang=en', 'wpforms-epfl-gdpr' ) ),
-				esc_url( 'https://wpforms.com/' ),
-				esc_url( __( 'https://wiki.epfl.ch/payonline-help', 'wpforms-epfl-gdpr' ) )
-			) .
-			'	<div class="notice">
-					<p>' . __( 'General Data Protection Regulation (<b>GDPR</b>): By using this addon, you agree to comply with the directives relating to data protection at EPFL and to apply the seven key principles of article 5 of the GDPR.', 'wpforms-epfl-gdpr' ) . '</p>
-				</div>
-				<p>' .
-				sprintf(
-					__( 'WPForms-EPFL-PayonlineXXXX\'s information, help and sources are available on <a href="%1$s">GitHub</a>. Your are using the version <a href="%2$s">v%3$s</a> of the addon.', 'wpforms-epfl-gdpr' ),
-					esc_url( 'https://github.com/epfl-si/wpforms-epfl-gdpr' ),
-					esc_url( 'https://github.com/epfl-si/wpforms-epfl-gdpr/releases/tag/v' . WPFORMS_EPFL_PAYONLINE_VERSION ),
-					WPFORMS_EPFL_PAYONLINE_VERSION
-				)
-				. '</p>
-				<hr>
-			</p>';
-
-		wpforms_panel_field(
-			'checkbox',
-			$this->slug,
-			'enable',
-			$this->form_data,
-			esc_html__( 'Enable EPFL PayonlineXXXX EPFL', 'wpforms-epfl-gdpr' ),
-			array(
-				'parent'  => 'EPFL',
-				'default' => '0',
-			)
-		);
-		wpforms_panel_field(
-			'text',
-			$this->slug,
-			'id_inst',
-			$this->form_data,
-			esc_html__( 'EPFL PayonlineXXXX instance ID', 'wpforms-epfl-gdpr' ),
-			array(
-				'parent'  => 'EPFL',
-				'tooltip' => esc_html__( 'You must create a payment instance (entity that identifies your conference in the PayonlineXXXX service) by using the "New Instance" link in the main menu on <a href="https://payonline.epfl.ch" target="_blank">payonline.epfl.ch</a>', 'wpforms-epfl-gdpr' ),
-			)
-		);
-		wpforms_panel_field(
-			'text',
-			$this->slug,
-			'email',
-			$this->form_data,
-			esc_html__( 'WPForms EPFL PayonlineXXXX Email Address', 'wpforms-epfl-gdpr' ),
-			array(
-				'parent'  => 'EPFL',
-				'tooltip' => esc_html__( 'Enter an email address for EPFL notification', 'wpforms-epfl-gdpr' ),
-			)
-		);
-		wpforms_panel_field(
-			'select',
-			$this->slug,
-			'mode',
-			$this->form_data,
-			esc_html__( 'Mode', 'wpforms-epfl-gdpr' ),
-			array(
-				'parent'  => 'EPFL',
-				'default' => 'production',
-				'options' => array(
-					'production' => esc_html__( 'Production', 'wpforms-epfl-gdpr' ),
-					'test'       => esc_html__( 'Test / Sandbox', 'wpforms-epfl-gdpr' ),
-				),
-				'tooltip' => esc_html__( 'Select Production to receive real EPFL or select Test to use the EPFL PayonlineXXXX developer sandbox (id_inst=1234567890)', 'wpforms-epfl-gdpr' ),
-			)
-		);
-		// wpforms_panel_field(
-		// 	'select',
-		// 	$this->slug,
-		// 	'transaction',
-		// 	$this->form_data,
-		// 	esc_html__( 'Payment Type', 'wpforms-epfl-gdpr' ),
-		// 	array(
-		// 		'parent'  => 'EPFL',
-		// 		'default' => 'product',
-		// 		'options' => array(
-		// 			'product'  => esc_html__( 'Products and Services', 'wpforms-epfl-gdpr' ),
-		// 			'donation' => esc_html__( 'Donation', 'wpforms-epfl-gdpr' ),
-		// 		),
-		// 		'tooltip' => esc_html__( 'Select the type of payment you are receiving.', 'wpforms-epfl-gdpr' ),
-		// 	)
-		// );
-		// wpforms_panel_field(
-		// 	'text',
-		// 	$this->slug,
-		// 	'cancel_url',
-		// 	$this->form_data,
-		// 	esc_html__( 'Cancel URL', 'wpforms-epfl-gdpr' ),
-		// 	array(
-		// 		'parent'  => 'EPFL',
-		// 		'tooltip' => esc_html__( 'Enter the URL to send users to if they do not complete the EPFL PayonlineXXXX checkout', 'wpforms-epfl-gdpr' ),
-		// 	)
-		// );
-		wpforms_panel_field(
-			'select',
-			$this->slug,
-			'shipping',
-			$this->form_data,
-			esc_html__( 'Shipping', 'wpforms-epfl-gdpr' ),
-			array(
-				'parent'  => 'EPFL',
-				'default' => '0',
-				'options' => array(
-					'1' => esc_html__( 'Don\'t ask for an address', 'wpforms-epfl-gdpr' ),
-					'0' => esc_html__( 'Ask for an address, but do not require', 'wpforms-epfl-gdpr' ),
-					'2' => esc_html__( 'Ask for an address and require it', 'wpforms-epfl-gdpr' ),
-				),
-			)
-		);
-		wpforms_panel_field(
-			'checkbox',
-			$this->slug,
-			'note',
-			$this->form_data,
-			esc_html__( 'Don\'t ask buyer to include a note with payment', 'wpforms-epfl-gdpr' ),
-			array(
-				'parent'  => 'EPFL',
-				'default' => '1',
-			)
-		);
-
-		if ( function_exists( 'wpforms_conditional_logic' ) ) {
-			wpforms_conditional_logic()->conditionals_block(
-				array(
-					'form'        => $this->form_data,
-					'type'        => 'panel',
-					'panel'       => 'epfl_payonlineXX',
-					'parent'      => 'EPFL',
-					'actions'     => array(
-						'go'   => esc_html__( 'Process', 'wpforms-epfl-gdpr' ),
-						'stop' => esc_html__( 'Don\'t process', 'wpforms-epfl-gdpr' ),
-					),
-					'action_desc' => esc_html__( 'this charge if', 'wpforms-epfl-gdpr' ),
-					'reference'   => esc_html__( 'EPFL PayonlineXXXX Standard payment', 'wpforms-epfl-gdpr' ),
-				)
-			);
-		} else {
-			echo '<p class="note">' .
-				sprintf(
-					wp_kses(
-						/* translators: %s - Addons page URL in admin area. */
-						__( 'Install the <a href="%s">Conditional Logic addon</a> to enable conditional logic for EPFL Payonline EPFL.', 'wpforms-epfl-gdpr' ),
-						array(
-							'a' => array(
-								'href' => array(),
-							),
-						)
-					),
-					admin_url( 'admin.php?page=wpforms-addons' )
-				) .
-				'</p>';
-		}
-	}
-
 }
-
-new WPForms_EPFL_GDPR();
