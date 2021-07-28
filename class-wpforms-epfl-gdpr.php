@@ -41,14 +41,126 @@ class WPForms_EPFL_GDPR {
 		// Add additional link to the plugin row
 		add_action( 'admin_menu', array( $this, 'wpforms_epfl_gdpr_admin_menu' ) );
 
+		// This plugin main logic.
 		add_action( 'admin_post_save_epfl_gdpr_options', array( $this, 'save_epfl_gdpr_options' ) );
 
 		// Change the admin list of forms.
 		add_filter( 'wpforms_overview_table_columns', array( $this, 'alter_wpforms_overview_table_columns' ), 10, 1 );
 		add_filter( 'wpforms_overview_table_column_value', array( $this, 'alter_wpforms_overview_table_columns_values' ), 10, 3 );
 
+
+		// apply_filters( 'wpforms_frontend_form_data', wpforms_decode( $form->post_content ) );
+		add_filter( 'wpforms_frontend_form_data', array( $this, 'alter_wpforms_frontend_form_data' ), 10, 1 );
+
+
+		// Hook on WPForms Builder to enforce the limitations.
+		add_action( 'wpforms_builder_init', array( $this, 'alter_wpforms_builder_init' ), 10, 1 );
+
+		// /wp-admin/admin.php?page=wpforms-entries&view=list&form_id=XXX.
+		add_action( 'wpforms_entry_list_title', array( $this, 'alter_wpforms_entry_list_title' ), 10, 2 );
+
+		//https://wp-httpd/wp-admin/admin.php?page=wpforms-entries&view=details&entry_id=2
+		add_action( 'wpforms_entry_details_content', array( $this, 'alter_wpforms_entry_details_content' ), 10, 3 ); //$entry, $form_data, $this );
+		// wpforms_entry_details_sidebar
+
+		// Frontend
+		add_action( 'wpforms_frontend_output_before', array( $this, 'alter_wpforms_frontend_output_before' ), 10, 2 ); // $form_data, $form )
+		// do_action( 'wpforms_frontend_output', $form_data, null, $title, $description, $errors );
+		add_action( 'wpforms_frontend_output', array( $this, 'alter_wpforms_frontend_output' ), 10, 5 );
+		// wpforms_display_fields_after
+
 		// Remove the menu entry (/wp-admin/admin.php?page=epfl-gdpr-options).
 		add_action( 'admin_init', array( $this, 'remove_epfl_gdpr_menu_entry' ), 999 );
+	}
+
+	/**
+	 * Filter: alter_wpforms_frontend_form_data
+	 *
+	 * Block frontend view of a form.
+	 *
+	 * @param array $form Form's data.
+	 *
+	 * @return array $form Form's altered data.
+	 */
+	public function alter_wpforms_frontend_form_data( $form ) {
+		$form_gdpr_options = new WPForms_EPFL_GDPR_Options( $form['id'] );
+		if ( ! $form_gdpr_options->can_change_options() ) {
+			$form['fields'] = array();
+			echo '<div style="border: 1px red solid;">You are not allowed to view this form due to EPFL GDPR enforcement.</div>';
+		}
+		return $form;
+	}
+
+	/**
+	 * Action: alter_wpforms_entry_details_content
+	 *
+	 * Block details view of a blocked form (e.g. /wp-admin/admin.php?page=wpforms-entries&view=details&entry_id=1).
+	 *
+	 * @param array  $entry Current entry.
+	 * @param array  $form_data Form's data.
+	 * @param object $obj $this.
+	 */
+	public function alter_wpforms_frontend_output( $form_data, $deprecated, $title, $description, $errors ) {
+		echo "<h1>hello-end</h1>";
+		//die();
+	}
+
+	/**
+	 * Action: alter_wpforms_entry_details_content
+	 *
+	 * Block details view of a blocked form (e.g. /wp-admin/admin.php?page=wpforms-entries&view=details&entry_id=1).
+	 *
+	 * @param array  $entry Current entry.
+	 * @param array  $form_data Form's data.
+	 * @param object $obj $this.
+	 */
+	public function alter_wpforms_frontend_output_before( $form_data, $form ) {
+		
+		// 
+		// echo "<pre>DATA:";
+		// var_dump($form_data);
+		// echo "-------------------";
+		// var_dump($form);
+		// 
+		// $form_data = new StdClass();
+		// $form = new StdClass();
+		// 
+		// return $form;
+		// $form_gdpr_options = new WPForms_EPFL_GDPR_Options( $form_data['id'] );
+		// if ( ! $form_gdpr_options->can_change_options() ) {
+		// 	die( 'You are not allowed to view details due to EPFL GDPR enforcement' );
+		// }
+	}
+
+	/**
+	 * Function: alter_wpforms_entry_details_content
+	 *
+	 * Block details view of a blocked form (e.g. /wp-admin/admin.php?page=wpforms-entries&view=details&entry_id=1).
+	 *
+	 * @param array  $entry Current entry.
+	 * @param array  $form_data Form's data.
+	 * @param object $obj $this.
+	 */
+	public function alter_wpforms_entry_details_content( $entry, $form_data, $obj ) {
+		$form_gdpr_options = new WPForms_EPFL_GDPR_Options( $entry->form_id );
+		if ( ! $form_gdpr_options->can_change_options() ) {
+			die( 'You are not allowed to view details due to EPFL GDPR enforcement' );
+		}
+	}
+
+	/**
+	 * Action: alter_wpforms_entry_list_title
+	 *
+	 * Block listing of form entries (e.g. /wp-admin/admin.php?page=wpforms-entries&view=list&form_id=8).
+	 *
+	 * @param array  $form_data Form's data.
+	 * @param object $obj $this.
+	 */
+	public function alter_wpforms_entry_list_title( $form_data, $obj ) {
+		$form_gdpr_options = new WPForms_EPFL_GDPR_Options( $form_data['id'] );
+		if ( ! $form_gdpr_options->can_change_options() ) {
+			die( 'You are not allowed to view details due to EPFL GDPR enforcement.' );
+		}
 	}
 
 	/**
@@ -62,11 +174,13 @@ class WPForms_EPFL_GDPR {
 	}
 
 	/**
-	 * Function: alter_wpforms_overview_table_columns
+	 * Filter: alter_wpforms_overview_table_columns
 	 *
 	 * Add "ours" columns to /wp-admin/admin.php?page=wpforms-overview
 	 *
 	 * @param array $columns The columns data.
+	 *
+	 * @return array $columns The altered columns data.
 	 */
 	public function alter_wpforms_overview_table_columns( $columns ) {
 		$offset = 2;
@@ -80,11 +194,13 @@ class WPForms_EPFL_GDPR {
 	}
 
 	/**
-	 * Function: alter_wpforms_overview_table_columns_values
+	 * Filter: alter_wpforms_overview_table_columns_values
 	 *
 	 * @param array  $value The columns data.
 	 * @param object $form The form.
 	 * @param string $column_name The columns name.
+	 *
+	 * @return string the cell's value.
 	 */
 	public function alter_wpforms_overview_table_columns_values( $value, $form, $column_name ) {
 
@@ -119,7 +235,23 @@ class WPForms_EPFL_GDPR {
 	}
 
 	/**
-	 * Function: wpforms_epfl_gdpr_admin_menu
+	 * Action: alter_wpforms_builder_init
+	 *
+	 * @param string $view The current view.
+	 */
+	public function alter_wpforms_builder_init( $view ) {
+		if ( 'setup' !== $view ) {
+			$form_gdpr_options = new WPForms_EPFL_GDPR_Options( $_GET['form_id'] );
+			if ( ! $form_gdpr_options->can_change_options() ) {
+				die( 'You are not allowed to edit this form due to EPFL GDPR enforcement' );
+			}
+		}
+	}
+
+	/**
+	 * Action: wpforms_epfl_gdpr_admin_menu
+	 *
+	 * @return void
 	 */
 	public function wpforms_epfl_gdpr_admin_menu() {
 
@@ -170,7 +302,6 @@ html.wp-toolbar {
 		?>
 
 		<?php
-		// get the form infotmation
 		$form_gdpr_options = new WPForms_EPFL_GDPR_Options( $wpformsid );
 
 		// $mywpform = new \WPForms_Form_Handler();
@@ -210,9 +341,11 @@ html.wp-toolbar {
 	}
 
 	/**
-	 * Function: save_epfl_gdpr_options
+	 * Action: save_epfl_gdpr_options
 	 *
 	 * See: https://wordpress.stackexchange.com/questions/177076/post-form-request-with-admin-post
+	 *
+	 * @return void
 	 */
 	public function save_epfl_gdpr_options() {
 		error_log( '↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓' );
@@ -263,16 +396,20 @@ html.wp-toolbar {
 	 * page which is hidden in the menu by the function
 	 * "remove_epfl_gdpr_menu_entry" in this file.
 	 *
+	 * @return void
+	 *
 	 * @TODO: add some explaination here.
 	 */
-	public function display_epfl_gdpr_info() {
+	private function display_epfl_gdpr_info() {
 		echo '<h1>EPFL GDPR</h1>';
-		echo '<div class="update-nag notice notice-info">While your are not suppose to access this page directly, here is some information: @TODO</div>';
+		echo '<div class="update-nag notice notice-info">While your are not supposed to access this page directly, here is some information: @TODO</div>';
 		die();
 	}
 
 	/**
-	 * Function: remove admin menu entry
+	 * Action: remove admin menu entry
+	 *
+	 * @return void
 	 */
 	public function remove_epfl_gdpr_menu_entry() {
 		remove_menu_page( 'epfl-gdpr-options' );
